@@ -1,0 +1,16 @@
+- [ ] Tone. JS audio engine + timing clock.
+- [ ] Simplistic and calming/relaxing UI/UX design. Light blue background with soft gestural controls
+- [ ] Controls are a play/stop button, a metronome marking control (scrolling numbers from 40-200) and a time signature control (1-12/2-8(even numbers only))
+- [ ] Circle with a gradient dot appearing in the center every beat. Dot should materialize fully opaque and immediately begin to fade out into the background tuned with the next beat.Should be small but visibly at fully opaque. Like a period.
+- [ ] Outer structure surrounding the beat dot should have a dynamic shape. The shape will reflect the first number of the time signature. (3/4 or 3/2 is a triangle, 4/4 or 4/8 is a square, 6/8 is a hexagon and so forth) If the first number is 2, the shape will be a straight line, if it is 1, the shape will be a larger dot surrounding the smaller dot. 
+- [ ] For the UI/UX purpose you can ignore the second number of the time signature, the first number is the numbers of points on each shape. 
+- [ ] 1: dot,2:line,3:triangle,4:square, 5: pentagon,6: hexagon, 7: septagon,8: octagon, 9: nonagon, 10: decagon, 11: 11 point shape, 12: 12 point shape 
+- [ ] A small circular light will travel around each shape in the bpm provided, intersecting with each point on every beat
+- [ ] The light and be brighter and the Tone from Tone.Js will be louder on beat one of every measure, intersecting with the same point on the shape every time 
+- [ ] If the first number of the signature provided is 1, the dot in the middle will have a larger dot surrounding it
+- [ ] If the first number of the time signature is 2, the shape will be a straight line with a light traveling back and forth between both points. One point will be beat 1 and highlighted 
+- [ ] The main concern is to keep the sound in sync with animations so a single source of truth in regards to the audio clock is necessary.
+- [ ] The light will travel along each line of the polygon shape, intersecting with the points as it goes along. 
+- [ ] Make the outer shape only change it's size and "breathe" on the "first beat" of every measure. So every time the sound and color render change, "flex" the outer border shape then.
+- [ ]"Controls" bpm select and time signature will be implemented by clicking, holding the mousedown, and number scrubbing up or down by holding the mouse down. There will be no other controls.
+- [ ] Once playback begins, the controls for bpm select and time signature will be greyed out and not be operational until the playback is paused.
