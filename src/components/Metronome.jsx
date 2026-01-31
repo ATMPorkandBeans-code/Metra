@@ -34,7 +34,7 @@ const interpolatePosition = (points, progress) => {
   };
 };
 
-// Custom hook for mousedown + drag to scrub value
+// Custom hook for pointerdown + drag to scrub value (works with mouse and touch)
 const useScrollControl = (onChange, disabled) => {
   const elementRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -45,17 +45,18 @@ const useScrollControl = (onChange, disabled) => {
     const element = elementRef.current;
     if (!element) return;
 
-    const handleMouseDown = (e) => {
+    const handlePointerDown = (e) => {
       if (disabled) return;
       e.preventDefault();
       isDraggingRef.current = true;
       startYRef.current = e.clientY;
       accumulatedDeltaRef.current = 0;
       element.classList.add('holding');
+      element.setPointerCapture(e.pointerId);
       document.body.style.cursor = 'ns-resize';
     };
 
-    const handleMouseMove = (e) => {
+    const handlePointerMove = (e) => {
       if (!isDraggingRef.current || disabled) return;
 
       // Calculate how far we've moved from start position
@@ -74,22 +75,23 @@ const useScrollControl = (onChange, disabled) => {
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = (e) => {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
         element.classList.remove('holding');
+        element.releasePointerCapture(e.pointerId);
         document.body.style.cursor = '';
       }
     };
 
-    element.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
 
     return () => {
-      element.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [onChange, disabled]);
 

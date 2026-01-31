@@ -14,3 +14,4 @@
 - [ ] Make the outer shape only change it's size and "breathe" on the "first beat" of every measure. So every time the sound and color render change, "flex" the outer border shape then.
 - [ ]"Controls" bpm select and time signature will be implemented by clicking, holding the mousedown, and number scrubbing up or down by holding the mouse down. There will be no other controls.
 - [ ] Once playback begins, the controls for bpm select and time signature will be greyed out and not be operational until the playback is paused.
+- [ ] Adapt mousedown event listeners for time signature and bpm to "pointermove" so that on a mobile web browser, the user can use thumb manipulation on the numbers to change them
