@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
+import { unlockMobileAudio } from '../utils/mobileAudioUnlock';
 import './Metronome.css';
 
 // Generate polygon points for SVG
@@ -144,52 +145,80 @@ const Metronome = () => {
 
     setAudioError(false);
 
+    // Helper to wrap promises with timeout
+    const withTimeout = (promise, ms) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), ms)
+        )
+      ]);
+    };
+
     audioInitPromiseRef.current = (async () => {
-      const audioContext = Tone.getContext().rawContext;
+      try {
+        const audioContext = Tone.getContext().rawContext;
 
-      const resumePromise = audioContext.resume();
-      const toneStartPromise = Tone.start();
+        // CRITICAL: Unlock mobile audio FIRST during user gesture
+        // This plays silent audio to move iOS from "ambient" to "playback" mode
+        // and activates the Web Audio graph on Android
+        await unlockMobileAudio(audioContext);
 
-      await Promise.allSettled([resumePromise, toneStartPromise]);
+        // Now start Tone.js with timeout (AudioContext should already be running from unlock)
+        try {
+          await withTimeout(Tone.start(), 2000);
+        } catch {
+          // Tone.start timed out or failed - try to continue anyway
+        }
 
-      if (audioContext.state !== 'running') {
+        // Final check - ensure AudioContext is running
+        if (audioContext.state !== 'running') {
+          try {
+            await withTimeout(audioContext.resume(), 1000);
+          } catch {
+            // Ignore resume errors/timeout
+          }
+        }
+
+        // Even if not 'running', try to create synths - some browsers report wrong state
+        if (!synthRef.current) {
+          synthRef.current = new Tone.MembraneSynth({
+            pitchDecay: 0.008,
+            octaves: 2,
+            oscillator: { type: 'sine' },
+            envelope: {
+              attack: 0.001,
+              decay: 0.3,
+              sustain: 0,
+              release: 0.1,
+            },
+          }).toDestination();
+          synthRef.current.volume.value = -10;
+        }
+
+        if (!accentSynthRef.current) {
+          accentSynthRef.current = new Tone.MembraneSynth({
+            pitchDecay: 0.01,
+            octaves: 2.5,
+            oscillator: { type: 'sine' },
+            envelope: {
+              attack: 0.001,
+              decay: 0.4,
+              sustain: 0,
+              release: 0.15,
+            },
+          }).toDestination();
+          accentSynthRef.current.volume.value = -4;
+        }
+
+        setAudioReady(true);
+        setAudioError(false);
+        return true;
+      } catch (err) {
+        console.error('Audio init failed:', err);
         setAudioError(true);
         return false;
       }
-
-      if (!synthRef.current) {
-        synthRef.current = new Tone.MembraneSynth({
-          pitchDecay: 0.008,
-          octaves: 2,
-          oscillator: { type: 'sine' },
-          envelope: {
-            attack: 0.001,
-            decay: 0.3,
-            sustain: 0,
-            release: 0.1,
-          },
-        }).toDestination();
-        synthRef.current.volume.value = -10;
-      }
-
-      if (!accentSynthRef.current) {
-        accentSynthRef.current = new Tone.MembraneSynth({
-          pitchDecay: 0.01,
-          octaves: 2.5,
-          oscillator: { type: 'sine' },
-          envelope: {
-            attack: 0.001,
-            decay: 0.4,
-            sustain: 0,
-            release: 0.15,
-          },
-        }).toDestination();
-        accentSynthRef.current.volume.value = -4;
-      }
-
-      setAudioReady(true);
-      setAudioError(false);
-      return true;
     })();
 
     const ready = await audioInitPromiseRef.current;
