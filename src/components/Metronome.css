@@ -7,6 +7,28 @@
   gap: 60px;
 }
 
+/* App Header */
+.app-header {
+  font-size: 48px;
+  font-weight: 200;
+  letter-spacing: 6px;
+  color: rgba(74, 144, 194, 0.7);
+  text-transform: uppercase;
+  margin: 0;
+  padding: 20px 40px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.05)
+  );
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(100, 150, 200, 0.1),
+    inset 0 1px 10px rgba(255, 255, 255, 0.2);
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
 /* Visualization container */
 .visualization-container {
   width: 420px;
@@ -221,47 +243,55 @@
   min-width: 70px;
 }
 
-/* Time Signature Control */
-.time-sig-control {
+/* Beats per Measure Control */
+.beats-control {
+  min-width: 70px;
+}
+
+/* Control with arrows wrapper */
+.control-with-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.control-with-arrows.disabled .arrow-button {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Arrow buttons */
+.arrow-button {
+  width: 36px;
+  height: 24px;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 8px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 15px rgba(100, 150, 200, 0.15);
-  transition: all 0.2s ease;
+  justify-content: center;
+  color: #4a90c2;
+  transition: all 0.15s ease;
+  padding: 0;
 }
 
-.time-sig-control.disabled {
-  opacity: 0.4;
-  background: rgba(200, 200, 200, 0.3);
+.arrow-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.7);
+  transform: scale(1.05);
 }
 
-.time-sig-num,
-.time-sig-denom {
-  padding: 8px 12px;
-  border-radius: 12px;
-  min-width: 40px;
+.arrow-button:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(74, 144, 194, 0.2);
 }
 
-.time-sig-num .scroll-control-value,
-.time-sig-denom .scroll-control-value {
-  font-size: 24px;
+.arrow-button:disabled {
+  cursor: not-allowed;
 }
 
-.time-sig-slash {
-  font-size: 28px;
-  font-weight: 200;
-  color: #6a9bc3;
-  margin: 0 -4px;
-}
-
-/* Disabled state for time sig parts */
-.time-sig-control.disabled .scroll-control {
-  opacity: 1;
-  background: transparent;
-  box-shadow: none;
+.arrow-button svg {
+  width: 20px;
+  height: 20px;
 }

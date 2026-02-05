@@ -14,4 +14,8 @@
 - [ ] Make the outer shape only change it's size and "breathe" on the "first beat" of every measure. So every time the sound and color render change, "flex" the outer border shape then.
 - [ ]"Controls" bpm select and time signature will be implemented by clicking, holding the mousedown, and number scrubbing up or down by holding the mouse down. There will be no other controls.
 - [ ] Once playback begins, the controls for bpm select and time signature will be greyed out and not be operational until the playback is paused.
-- [ ] Adapt mousedown event listeners for time signature and bpm to "pointermove" so that on a mobile web browser, the user can use thumb manipulation on the numbers to change them
+- [x] Adapt mousedown event listeners for time signature and bpm to "pointermove" so that on a mobile web browser, the user can use thumb manipulation on the numbers to change them
+- [x] iOS Mobile Audio Fix: Tone.js sounds don't play through iPhone speakers (only Bluetooth) because iOS treats Web Audio as "ambient" audio respecting silent mode. Fix: Before starting Tone.js, "unlock" iOS audio by playing a silent HTML5 Audio element (base64-encoded MP3) and a silent buffer through the raw AudioContext during user gesture. This tricks iOS into allowing Web Audio through speakers.
+- [x] Add increment/decrement arrow buttons above and below BPM and Beats per Measure controls (keep drag-to-scrub as well)
+- [x] Change time signature display to just show first number as "Beats per Measure" (ignore denominator for UI)
+- [x] Add beautifully styled, calm-looking "Metronome" header at top of app

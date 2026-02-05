@@ -2,6 +2,39 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
 import './Metronome.css';
 
+// iOS audio unlock - plays a silent sound via HTML5 Audio to enable Web Audio through speakers
+const unlockAudioForIOS = async () => {
+  // Create a silent audio context buffer and play it
+  const audioContext = Tone.getContext().rawContext;
+
+  // Resume the audio context first
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+
+  // Create and play a silent HTML5 Audio element
+  // This "unlocks" audio on iOS and allows Web Audio to play through speakers
+  const silentAudio = new Audio();
+  silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQAAAAAAAAAAQGwNHHhTQAAAAAAAAAAAAAAAAD/4xjAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMADwAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMBAAAANIAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+  silentAudio.volume = 0.01;
+
+  try {
+    await silentAudio.play();
+    silentAudio.pause();
+    silentAudio.remove();
+  } catch (e) {
+    // Ignore errors - this is just a fallback unlock attempt
+    console.log('iOS audio unlock attempted');
+  }
+
+  // Also play a silent Tone.js buffer to fully initialize the audio graph
+  const buffer = audioContext.createBuffer(1, 1, 22050);
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start(0);
+};
+
 // Generate polygon points for SVG
 const getPolygonPoints = (sides, radius, centerX, centerY) => {
   const points = [];
@@ -131,22 +164,9 @@ const Metronome = () => {
     }));
   }, []);
 
-  const handleDenominatorChange = useCallback((delta) => {
-    const denominators = [2, 4, 6, 8];
-    setTimeSignature((prev) => {
-      const currentIndex = denominators.indexOf(prev.denominator);
-      const newIndex = Math.min(
-        denominators.length - 1,
-        Math.max(0, currentIndex + delta)
-      );
-      return { ...prev, denominator: denominators[newIndex] };
-    });
-  }, []);
-
   // Scroll control refs
   const bpmRef = useScrollControl(handleBpmChange, isPlaying);
   const numeratorRef = useScrollControl(handleNumeratorChange, isPlaying);
-  const denominatorRef = useScrollControl(handleDenominatorChange, isPlaying);
 
   // Initialize Tone.js synths
   useEffect(() => {
@@ -304,7 +324,9 @@ const Metronome = () => {
   }, [isPlaying, triggerBeat]);
 
   const handlePlayToggle = async () => {
-    if (Tone.context.state !== 'running') {
+    if (Tone.getContext().state !== 'running') {
+      // Unlock audio for iOS - must happen on user gesture
+      await unlockAudioForIOS();
       await Tone.start();
     }
     setIsPlaying(!isPlaying);
@@ -323,6 +345,7 @@ const Metronome = () => {
 
   return (
     <div className="metronome-container">
+      <h1 className="app-header">Metronome</h1>
       <div
         className={`visualization-container ${isDownbeat ? 'flex' : ''}`}
         style={{ '--beat-duration': `${beatDuration}s` }}
@@ -419,31 +442,66 @@ const Metronome = () => {
           )}
         </button>
 
-        <div
-          ref={bpmRef}
-          className={`scroll-control bpm-control ${isPlaying ? 'disabled' : ''}`}
-          title={isPlaying ? 'Stop playback to adjust' : 'Hold and scroll to adjust'}
-        >
-          <span className="scroll-control-value">{bpm}</span>
-          <span className="scroll-control-label">BPM</span>
+        <div className={`control-with-arrows ${isPlaying ? 'disabled' : ''}`}>
+          <button
+            className="arrow-button arrow-up"
+            onClick={() => !isPlaying && handleBpmChange(1)}
+            disabled={isPlaying}
+            aria-label="Increase BPM"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14l5-5 5 5H7z" />
+            </svg>
+          </button>
+          <div
+            ref={bpmRef}
+            className={`scroll-control bpm-control ${isPlaying ? 'disabled' : ''}`}
+            title={isPlaying ? 'Stop playback to adjust' : 'Hold and drag to adjust'}
+          >
+            <span className="scroll-control-value">{bpm}</span>
+            <span className="scroll-control-label">BPM</span>
+          </div>
+          <button
+            className="arrow-button arrow-down"
+            onClick={() => !isPlaying && handleBpmChange(-1)}
+            disabled={isPlaying}
+            aria-label="Decrease BPM"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5H7z" />
+            </svg>
+          </button>
         </div>
 
-        <div className={`time-sig-control ${isPlaying ? 'disabled' : ''}`}>
+        <div className={`control-with-arrows ${isPlaying ? 'disabled' : ''}`}>
+          <button
+            className="arrow-button arrow-up"
+            onClick={() => !isPlaying && handleNumeratorChange(1)}
+            disabled={isPlaying}
+            aria-label="Increase beats per measure"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14l5-5 5 5H7z" />
+            </svg>
+          </button>
           <div
             ref={numeratorRef}
-            className={`scroll-control time-sig-num ${isPlaying ? 'disabled' : ''}`}
-            title={isPlaying ? 'Stop playback to adjust' : 'Hold and scroll to adjust'}
+            className={`scroll-control beats-control ${isPlaying ? 'disabled' : ''}`}
+            title={isPlaying ? 'Stop playback to adjust' : 'Hold and drag to adjust'}
           >
             <span className="scroll-control-value">{timeSignature.numerator}</span>
+            <span className="scroll-control-label">Beats/Measure</span>
           </div>
-          <span className="time-sig-slash">/</span>
-          <div
-            ref={denominatorRef}
-            className={`scroll-control time-sig-denom ${isPlaying ? 'disabled' : ''}`}
-            title={isPlaying ? 'Stop playback to adjust' : 'Hold and scroll to adjust'}
+          <button
+            className="arrow-button arrow-down"
+            onClick={() => !isPlaying && handleNumeratorChange(-1)}
+            disabled={isPlaying}
+            aria-label="Decrease beats per measure"
           >
-            <span className="scroll-control-value">{timeSignature.denominator}</span>
-          </div>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5H7z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
