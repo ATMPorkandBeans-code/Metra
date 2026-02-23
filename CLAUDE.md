@@ -19,3 +19,8 @@
 - [x] Add increment/decrement arrow buttons above and below BPM and Beats per Measure controls (keep drag-to-scrub as well)
 - [x] Change time signature display to just show first number as "Beats per Measure" (ignore denominator for UI)
 - [x] Add beautifully styled, calm-looking "Metronome" header at top of app
+- [x] Create a "Settings" function tab. Can be an overlay onto the existing UI. To access it will be a "Gear" icon.
+- [x] The Settings tab will have two primary functions. One function will be "Themes" and be color schemes for the app. The other will "Click Settings"
+- [x] "Themes" will have four different color schemes for the app. One will be "White" with black lining. One will be the "LightBlue" with "White" lining we already have(Keep it exactly the same please). One will be "Darker Red" with "White" lining. And the last will be "Black" with "White Lining.
+- [x] "Themes" will look like the Word "Themes" displayed and underneath it will be buttons with rounded corners.
+- [x] "Click Settings" will be an audio setting. It will change the audio output from Tone.js to an octave up.

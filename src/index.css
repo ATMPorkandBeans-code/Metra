@@ -13,6 +13,24 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Theme color variables (RGB triplets for use with rgba()) */
+  --primary: 74, 144, 194;
+  --light: 106, 183, 245;
+  --dark: 58, 143, 217;
+  --accent: 255, 255, 255;
+  --text: 45, 90, 123;
+  --text-secondary: 106, 155, 195;
+  --bg-1: #b8daf5;
+  --bg-2: #a8d4f5;
+  --bg-3: #8ec8f2;
+  --control-bg: 255, 255, 255;
+  --control-border: 255, 255, 255;
+  --play-bg-from: #ffffff;
+  --play-bg-to: #e6eef5;
+  --play-active-from: #4a90c2;
+  --play-active-to: #3a7ab0;
+  --overlay-bg: rgba(0, 0, 0, 0.3);
 }
 
 body {
@@ -21,16 +39,77 @@ body {
   min-height: 100vh;
   background: linear-gradient(
     180deg,
-    #b8daf5 0%,
-    #a8d4f5 25%,
-    #8ec8f2 50%,
-    #a8d4f5 75%,
-    #b8daf5 100%
+    var(--bg-1) 0%,
+    var(--bg-2) 25%,
+    var(--bg-3) 50%,
+    var(--bg-2) 75%,
+    var(--bg-1) 100%
   );
   background-attachment: fixed;
+  transition: background 0.4s ease;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* === THEME: White === */
+body.theme-white {
+  --primary: 40, 40, 40;
+  --light: 100, 100, 100;
+  --dark: 60, 60, 60;
+  --accent: 0, 0, 0;
+  --text: 30, 30, 30;
+  --text-secondary: 100, 100, 100;
+  --bg-1: #ffffff;
+  --bg-2: #f5f5f5;
+  --bg-3: #e8e8e8;
+  --control-bg: 230, 230, 230;
+  --control-border: 200, 200, 200;
+  --play-bg-from: #f0f0f0;
+  --play-bg-to: #d8d8d8;
+  --play-active-from: #333333;
+  --play-active-to: #1a1a1a;
+  --overlay-bg: rgba(0, 0, 0, 0.25);
+}
+
+/* === THEME: Red === */
+body.theme-red {
+  --primary: 200, 80, 80;
+  --light: 255, 120, 120;
+  --dark: 180, 60, 60;
+  --accent: 255, 220, 220;
+  --text: 255, 200, 200;
+  --text-secondary: 200, 120, 120;
+  --bg-1: #4a1a1a;
+  --bg-2: #3a1010;
+  --bg-3: #2a0a0a;
+  --control-bg: 80, 30, 30;
+  --control-border: 120, 50, 50;
+  --play-bg-from: #5a2a2a;
+  --play-bg-to: #4a1a1a;
+  --play-active-from: #c85050;
+  --play-active-to: #a03030;
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* === THEME: Black === */
+body.theme-black {
+  --primary: 200, 200, 200;
+  --light: 255, 255, 255;
+  --dark: 180, 180, 180;
+  --accent: 255, 255, 255;
+  --text: 220, 220, 220;
+  --text-secondary: 160, 160, 160;
+  --bg-1: #1a1a1a;
+  --bg-2: #111111;
+  --bg-3: #000000;
+  --control-bg: 40, 40, 40;
+  --control-border: 80, 80, 80;
+  --play-bg-from: #2a2a2a;
+  --play-bg-to: #1a1a1a;
+  --play-active-from: #e0e0e0;
+  --play-active-to: #c0c0c0;
+  --overlay-bg: rgba(0, 0, 0, 0.6);
 }
