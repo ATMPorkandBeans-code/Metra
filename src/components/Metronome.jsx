@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
+import { unlockMobileAudio } from '../utils/mobileAudioUnlock';
 import './Metronome.css';
 
 // iOS audio unlock - plays a silent sound via HTML5 Audio to enable Web Audio through speakers
 const unlockAudioForIOS = async () => {
+  // Create a silent audio context buffer and play it
   const audioContext = Tone.getContext().rawContext;
 
+  // Resume the audio context first
   if (audioContext.state === 'suspended') {
     await audioContext.resume();
   }
 
+  // Create and play a silent HTML5 Audio element
+  // This "unlocks" audio on iOS and allows Web Audio to play through speakers
   const silentAudio = new Audio();
   silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQAAAAAAAAAAQGwNHHhTQAAAAAAAAAAAAAAAAD/4xjAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMADwAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMBAAAANIAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
   silentAudio.volume = 0.01;
@@ -19,9 +24,11 @@ const unlockAudioForIOS = async () => {
     silentAudio.pause();
     silentAudio.remove();
   } catch (e) {
+    // Ignore errors - this is just a fallback unlock attempt
     console.log('iOS audio unlock attempted');
   }
 
+  // Also play a silent Tone.js buffer to fully initialize the audio graph
   const buffer = audioContext.createBuffer(1, 1, 22050);
   const source = audioContext.createBufferSource();
   source.buffer = buffer;
@@ -123,6 +130,8 @@ const useScrollControl = (onChange, disabled) => {
 
 const Metronome = () => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState(false);
   const [bpm, setBpm] = useState(120);
   const [beatActive, setBeatActive] = useState(false);
   const [timeSignature, setTimeSignature] = useState({ numerator: 4, denominator: 4 });
@@ -138,7 +147,6 @@ const Metronome = () => {
   const loopRef = useRef(null);
   const beatCountRef = useRef(0);
   const animationFrameRef = useRef(null);
-  const clickSoundRef = useRef(clickSound);
 
   // SVG dimensions
   const svgSize = 420;
@@ -166,34 +174,94 @@ const Metronome = () => {
     document.body.className = theme === 'blue' ? '' : `theme-${theme}`;
   }, [theme]);
 
-  // Initialize Tone.js synths
+  const ensureAudioReady = useCallback(async () => {
+    if (audioReady) return true;
+    if (audioInitPromiseRef.current) return audioInitPromiseRef.current;
+
+    setAudioError(false);
+
+    // Helper to wrap promises with timeout
+    const withTimeout = (promise, ms) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), ms)
+        )
+      ]);
+    };
+
+    audioInitPromiseRef.current = (async () => {
+      try {
+        const audioContext = Tone.getContext().rawContext;
+
+        // CRITICAL: Unlock mobile audio FIRST during user gesture
+        // This plays silent audio to move iOS from "ambient" to "playback" mode
+        // and activates the Web Audio graph on Android
+        await unlockMobileAudio(audioContext);
+
+        // Now start Tone.js with timeout (AudioContext should already be running from unlock)
+        try {
+          await withTimeout(Tone.start(), 2000);
+        } catch {
+          // Tone.start timed out or failed - try to continue anyway
+        }
+
+        // Final check - ensure AudioContext is running
+        if (audioContext.state !== 'running') {
+          try {
+            await withTimeout(audioContext.resume(), 1000);
+          } catch {
+            // Ignore resume errors/timeout
+          }
+        }
+
+        // Even if not 'running', try to create synths - some browsers report wrong state
+        if (!synthRef.current) {
+          synthRef.current = new Tone.MembraneSynth({
+            pitchDecay: 0.008,
+            octaves: 2,
+            oscillator: { type: 'sine' },
+            envelope: {
+              attack: 0.001,
+              decay: 0.3,
+              sustain: 0,
+              release: 0.1,
+            },
+          }).toDestination();
+          synthRef.current.volume.value = -10;
+        }
+
+        if (!accentSynthRef.current) {
+          accentSynthRef.current = new Tone.MembraneSynth({
+            pitchDecay: 0.01,
+            octaves: 2.5,
+            oscillator: { type: 'sine' },
+            envelope: {
+              attack: 0.001,
+              decay: 0.4,
+              sustain: 0,
+              release: 0.15,
+            },
+          }).toDestination();
+          accentSynthRef.current.volume.value = -4;
+        }
+
+        setAudioReady(true);
+        setAudioError(false);
+        return true;
+      } catch (err) {
+        console.error('Audio init failed:', err);
+        setAudioError(true);
+        return false;
+      }
+    })();
+
+    const ready = await audioInitPromiseRef.current;
+    audioInitPromiseRef.current = null;
+    return ready;
+  }, [audioReady]);
+
   useEffect(() => {
-    synthRef.current = new Tone.MembraneSynth({
-      pitchDecay: 0.008,
-      octaves: 2,
-      oscillator: { type: 'sine' },
-      envelope: {
-        attack: 0.001,
-        decay: 0.3,
-        sustain: 0,
-        release: 0.1,
-      },
-    }).toDestination();
-    synthRef.current.volume.value = -10;
-
-    accentSynthRef.current = new Tone.MembraneSynth({
-      pitchDecay: 0.01,
-      octaves: 2.5,
-      oscillator: { type: 'sine' },
-      envelope: {
-        attack: 0.001,
-        decay: 0.4,
-        sustain: 0,
-        release: 0.15,
-      },
-    }).toDestination();
-    accentSynthRef.current.volume.value = -4;
-
     return () => {
       synthRef.current?.dispose();
       accentSynthRef.current?.dispose();
@@ -213,12 +281,17 @@ const Metronome = () => {
 
   // Update BPM
   useEffect(() => {
-    Tone.Transport.bpm.value = bpm;
-  }, [bpm]);
+    if (audioReady) {
+      Tone.Transport.bpm.value = bpm;
+    }
+  }, [bpm, audioReady]);
 
   // Animation loop for traveling light
   const animate = useCallback(() => {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+      console.log('animate called but isPlaying is false');
+      return;
+    }
 
     const { numerator } = timeSignature;
     const beatDurationSec = 60 / Tone.Transport.bpm.value;
@@ -240,11 +313,13 @@ const Metronome = () => {
 
     setLightPosition(newPos);
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isPlaying, timeSignature, center, shapeRadius]);
+  }, [isPlaying, audioReady, timeSignature, center, shapeRadius]);
 
   // Start/stop animation loop
   useEffect(() => {
+    console.log('Animation useEffect triggered, isPlaying:', isPlaying);
     if (isPlaying) {
+      console.log('Starting animation loop');
       animationFrameRef.current = requestAnimationFrame(animate);
     } else {
       if (animationFrameRef.current) {
@@ -267,11 +342,13 @@ const Metronome = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, animate, timeSignature, center, shapeRadius]);
+  }, [isPlaying, audioReady, animate, timeSignature, center, shapeRadius]);
 
   // Handle beat trigger
   const triggerBeat = useCallback(
     (time) => {
+      if (!synthRef.current || !accentSynthRef.current) return;
+
       const beatIndex = beatCountRef.current % timeSignature.numerator;
       const isFirstBeat = beatIndex === 0;
       const isHigh = clickSoundRef.current === 'high';
@@ -303,7 +380,7 @@ const Metronome = () => {
 
   // Setup loop
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && audioReady) {
       beatCountRef.current = 0;
       loopRef.current?.dispose();
       loopRef.current = new Tone.Loop(triggerBeat, '4n');
@@ -320,10 +397,11 @@ const Metronome = () => {
       setBeatActive(false);
       setIsDownbeat(false);
     }
-  }, [isPlaying, triggerBeat]);
+  }, [isPlaying, audioReady, triggerBeat]);
 
   const handlePlayToggle = async () => {
     if (Tone.getContext().state !== 'running') {
+      // Unlock audio for iOS - must happen on user gesture
       await unlockAudioForIOS();
       await Tone.start();
     }
@@ -418,21 +496,24 @@ const Metronome = () => {
       </div>
 
       <div className={`controls ${isPlaying ? 'disabled' : ''}`}>
-        <button
-          className={`play-button ${isPlaying ? 'playing' : ''}`}
-          onClick={handlePlayToggle}
-          aria-label={isPlaying ? 'Stop' : 'Play'}
-        >
-          {isPlaying ? (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="8,6 18,12 8,18" />
-            </svg>
-          )}
-        </button>
+        <div className="play-control">
+          <button
+            className={`play-button ${isPlaying ? 'playing' : ''}`}
+            onClick={handlePlayToggle}
+            aria-label={isPlaying ? 'Stop' : 'Play'}
+          >
+            {isPlaying ? (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="8,6 18,12 8,18" />
+              </svg>
+            )}
+          </button>
+          {audioError && <div className="audio-error">Tap again to enable sound</div>}
+        </div>
 
         <div className={`control-with-arrows ${isPlaying ? 'disabled' : ''}`}>
           <button
