@@ -3,39 +3,6 @@ import * as Tone from 'tone';
 import { unlockMobileAudio } from '../utils/mobileAudioUnlock';
 import './Metronome.css';
 
-// iOS audio unlock - plays a silent sound via HTML5 Audio to enable Web Audio through speakers
-const unlockAudioForIOS = async () => {
-  // Create a silent audio context buffer and play it
-  const audioContext = Tone.getContext().rawContext;
-
-  // Resume the audio context first
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
-
-  // Create and play a silent HTML5 Audio element
-  // This "unlocks" audio on iOS and allows Web Audio to play through speakers
-  const silentAudio = new Audio();
-  silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQAAAAAAAAAAQGwNHHhTQAAAAAAAAAAAAAAAAD/4xjAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMADwAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/jGMBAAAANIAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
-  silentAudio.volume = 0.01;
-
-  try {
-    await silentAudio.play();
-    silentAudio.pause();
-    silentAudio.remove();
-  } catch (e) {
-    // Ignore errors - this is just a fallback unlock attempt
-    console.log('iOS audio unlock attempted');
-  }
-
-  // Also play a silent Tone.js buffer to fully initialize the audio graph
-  const buffer = audioContext.createBuffer(1, 1, 22050);
-  const source = audioContext.createBufferSource();
-  source.buffer = buffer;
-  source.connect(audioContext.destination);
-  source.start(0);
-};
-
 // Generate polygon points for SVG
 const getPolygonPoints = (sides, radius, centerX, centerY) => {
   const points = [];
@@ -147,6 +114,8 @@ const Metronome = () => {
   const loopRef = useRef(null);
   const beatCountRef = useRef(0);
   const animationFrameRef = useRef(null);
+  const audioInitPromiseRef = useRef(null);
+  const clickSoundRef = useRef(clickSound);
 
   // SVG dimensions
   const svgSize = 420;
@@ -400,10 +369,9 @@ const Metronome = () => {
   }, [isPlaying, audioReady, triggerBeat]);
 
   const handlePlayToggle = async () => {
-    if (Tone.getContext().state !== 'running') {
-      // Unlock audio for iOS - must happen on user gesture
-      await unlockAudioForIOS();
-      await Tone.start();
+    if (!audioReady) {
+      const ready = await ensureAudioReady();
+      if (!ready) return;
     }
     setIsPlaying(!isPlaying);
   };
